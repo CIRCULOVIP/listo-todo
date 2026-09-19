@@ -8,6 +8,8 @@ export default function TeamPanel({ folders, session }) {
   const [memberships, setMemberships] = useState([]); // [{folder_id, user_id}]
   const [statuses, setStatuses] = useState({}); // { [userId]: { confirmed, lastSignInAt } }
   const [resending, setResending] = useState(null); // userId currently resending
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -86,6 +88,14 @@ export default function TeamPanel({ folders, session }) {
     alert(data.resent ? `Reenviamos la invitación a ${p.email}` : `${p.display_name} ya había aceptado la invitación`);
   }
 
+  async function saveName(p) {
+    const name = editValue.trim();
+    setEditingId(null);
+    if (!name || name === p.display_name) return;
+    setProfiles((current) => current.map((x) => (x.id === p.id ? { ...x, display_name: name } : x)));
+    await supabase.from("listo_profiles").update({ display_name: name }).eq("id", p.id);
+  }
+
   async function toggleAdmin(p) {
     const makingAdmin = !p.is_admin;
     if (
@@ -117,13 +127,28 @@ export default function TeamPanel({ folders, session }) {
             <div key={p.id} className="py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-2 mb-2">
                 <img src={initialsAvatar(p.display_name)} alt="" className="w-6 h-6 rounded-full flex-none" />
-                <span
-                  className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate min-w-0"
-                  title={p.email}
-                >
-                  {p.display_name}
-                  {p.is_admin && <span className="text-accent"> · admin</span>}
-                </span>
+                {editingId === p.id ? (
+                  <input
+                    autoFocus
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => saveName(p)}
+                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    className="text-xs font-semibold bg-transparent outline-none border-b border-accent min-w-0 text-slate-700 dark:text-slate-200"
+                  />
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingId(p.id);
+                      setEditValue(p.display_name);
+                    }}
+                    title={`Editar nombre · ${p.email}`}
+                    className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate min-w-0 hover:underline decoration-dotted text-left"
+                  >
+                    {p.display_name}
+                    {p.is_admin && <span className="text-accent"> · admin</span>}
+                  </button>
+                )}
                 {statuses[p.id] && !statuses[p.id].confirmed && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded flex-none">
                     Pendiente
