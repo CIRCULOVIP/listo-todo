@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 export default function InvitePanel({ folders }) {
+  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [selectedFolders, setSelectedFolders] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | sending | ok | error
@@ -43,50 +44,59 @@ export default function InvitePanel({ folders }) {
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl p-4 mb-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Invitar al equipo</p>
-      <form onSubmit={handleInvite} className="space-y-3">
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@equipo.com"
-          className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
-        />
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-between w-full text-xs font-bold uppercase tracking-wide text-slate-400"
+      >
+        Invitar al equipo
+        <span className="text-slate-300">{open ? "▲" : "▼"}</span>
+      </button>
 
-        <div>
-          <p className="text-xs text-slate-400 mb-1.5">Carpetas a las que entra:</p>
-          <div className="flex flex-wrap gap-1.5">
-            {folders.map((f) => (
-              <button
-                type="button"
-                key={f.id}
-                onClick={() => toggleFolder(f.id)}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
-                  selectedFolders.includes(f.id)
-                    ? "bg-accent text-white border-accent"
-                    : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
-                }`}
-              >
-                <span
-                  className="w-2 h-2 rounded-full flex-none"
-                  style={{ background: selectedFolders.includes(f.id) ? "#fff" : f.color }}
-                />
-                {f.name}
-              </button>
-            ))}
+      {open && (
+        <form onSubmit={handleInvite} className="space-y-3 mt-3">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@equipo.com"
+            className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
+          />
+
+          <div>
+            <p className="text-xs text-slate-400 mb-1.5">Carpetas a las que entra:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {folders.map((f) => (
+                <button
+                  type="button"
+                  key={f.id}
+                  onClick={() => toggleFolder(f.id)}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
+                    selectedFolders.includes(f.id)
+                      ? "bg-accent text-white border-accent"
+                      : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-none"
+                    style={{ background: selectedFolders.includes(f.id) ? "#fff" : f.color }}
+                  />
+                  {f.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          disabled={status === "sending" || selectedFolders.length === 0}
-          className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 disabled:opacity-50"
-        >
-          {status === "sending" ? "Enviando…" : "Invitar"}
-        </button>
-      </form>
-      {msg && <p className={`text-xs mt-2 ${status === "error" ? "text-danger" : "text-emerald-600"}`}>{msg}</p>}
+          <button
+            type="submit"
+            disabled={status === "sending" || selectedFolders.length === 0}
+            className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 disabled:opacity-50"
+          >
+            {status === "sending" ? "Enviando…" : "Invitar"}
+          </button>
+          {msg && <p className={`text-xs ${status === "error" ? "text-danger" : "text-emerald-600"}`}>{msg}</p>}
+        </form>
+      )}
     </div>
   );
 }
