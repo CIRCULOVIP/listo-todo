@@ -6,6 +6,8 @@ export default function TeamPanel({ folders, session }) {
   const [open, setOpen] = useState(false);
   const [profiles, setProfiles] = useState([]);
   const [memberships, setMemberships] = useState([]); // [{folder_id, user_id}]
+  const [statuses, setStatuses] = useState({}); // { [userId]: { confirmed, lastSignInAt } }
+  const [resending, setResending] = useState(null); // userId currently resending
 
   useEffect(() => {
     if (!open) return;
@@ -19,6 +21,13 @@ export default function TeamPanel({ folders, session }) {
       if (cancelled) return;
       setProfiles(profileData || []);
       setMemberships(memberData || []);
+
+      if (profileData?.length) {
+        const { data: statusData } = await supabase.functions.invoke("listo-team-status", {
+          body: { userIds: profileData.map((p) => p.id) },
+        });
+        if (!cancelled && statusData?.statuses) setStatuses(statusData.statuses);
+      }
     }
     load();
 
@@ -63,6 +72,20 @@ export default function TeamPanel({ folders, session }) {
     setMemberships((current) => current.filter((m) => m.user_id !== p.id));
   }
 
+  async function resendInvite(p) {
+    setResending(p.id);
+    const folderIds = memberships.filter((m) => m.user_id === p.id).map((m) => m.folder_id);
+    const { data, error } = await supabase.functions.invoke("listo-invite", {
+      body: { email: p.email, folderIds: folderIds.length ? folderIds : [folders[0]?.id], redirectTo: window.location.origin },
+    });
+    setResending(null);
+    if (error || data?.error) {
+      alert(data?.error || error.message);
+      return;
+    }
+    alert(data.resent ? `Reenviamos la invitación a ${p.email}` : `${p.display_name} ya había aceptado la invitación`);
+  }
+
   async function toggleAdmin(p) {
     const makingAdmin = !p.is_admin;
     if (
@@ -101,14 +124,30 @@ export default function TeamPanel({ folders, session }) {
                   {p.display_name}
                   {p.is_admin && <span className="text-accent"> · admin</span>}
                 </span>
-                {p.id !== session.user.id && (
-                  <button
-                    onClick={() => toggleAdmin(p)}
-                    className="text-[11px] text-slate-400 hover:text-accent underline decoration-dotted flex-none ml-auto"
-                  >
-                    {p.is_admin ? "quitar admin" : "hacer admin"}
-                  </button>
+                {statuses[p.id] && !statuses[p.id].confirmed && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded flex-none">
+                    Pendiente
+                  </span>
                 )}
+                <div className="flex items-center gap-2 flex-none ml-auto">
+                  {statuses[p.id] && !statuses[p.id].confirmed && (
+                    <button
+                      onClick={() => resendInvite(p)}
+                      disabled={resending === p.id}
+                      className="text-[11px] text-slate-400 hover:text-accent underline decoration-dotted disabled:opacity-50"
+                    >
+                      {resending === p.id ? "enviando…" : "reenviar"}
+                    </button>
+                  )}
+                  {p.id !== session.user.id && (
+                    <button
+                      onClick={() => toggleAdmin(p)}
+                      className="text-[11px] text-slate-400 hover:text-accent underline decoration-dotted"
+                    >
+                      {p.is_admin ? "quitar admin" : "hacer admin"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap pl-8">
                 {folders.map((f) => {
