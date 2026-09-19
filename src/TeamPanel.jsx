@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { initialsAvatar } from "./avatar";
 
-export default function TeamPanel({ folders }) {
+export default function TeamPanel({ folders, session }) {
   const [open, setOpen] = useState(false);
   const [profiles, setProfiles] = useState([]);
   const [memberships, setMemberships] = useState([]); // [{folder_id, user_id}]
@@ -47,6 +47,20 @@ export default function TeamPanel({ folders }) {
     await supabase.from("listo_folder_members").delete().eq("user_id", p.id);
   }
 
+  async function toggleAdmin(p) {
+    const makingAdmin = !p.is_admin;
+    if (
+      !confirm(
+        makingAdmin
+          ? `¿Convertir a ${p.display_name} en admin? Va a ver todas las carpetas y poder invitar/gestionar al equipo.`
+          : `¿Sacarle el admin a ${p.display_name}? Pasa a ver solo las carpetas donde esté agregado.`
+      )
+    )
+      return;
+    setProfiles((current) => current.map((x) => (x.id === p.id ? { ...x, is_admin: makingAdmin } : x)));
+    await supabase.from("listo_profiles").update({ is_admin: makingAdmin }).eq("id", p.id);
+  }
+
   return (
     <div className="border border-slate-200 bg-white rounded-xl p-4 mb-5">
       <button
@@ -67,6 +81,14 @@ export default function TeamPanel({ folders }) {
                 {p.display_name}
                 {p.is_admin && <span className="text-accent"> · admin</span>}
               </span>
+              {p.id !== session.user.id && (
+                <button
+                  onClick={() => toggleAdmin(p)}
+                  className="text-[11px] text-slate-400 hover:text-accent underline decoration-dotted flex-none"
+                >
+                  {p.is_admin ? "quitar admin" : "hacer admin"}
+                </button>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {folders.map((f) => {
                   const active = p.is_admin || isMember(p.id, f.id);

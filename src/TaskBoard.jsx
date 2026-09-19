@@ -191,7 +191,7 @@ export default function TaskBoard({ session }) {
 
       {profile?.is_admin && (
         <>
-          <TeamPanel folders={folders} />
+          <TeamPanel folders={folders} session={session} />
           <InvitePanel folders={folders} />
         </>
       )}
