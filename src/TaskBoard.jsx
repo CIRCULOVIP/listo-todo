@@ -223,8 +223,10 @@ export default function TaskBoard({ session }) {
   const pending = tasks.filter((t) => !t.done).length;
   const done = tasks.length - pending;
 
+  const wide = view === "board" && boardView === "kanban";
+
   return (
-    <div className="max-w-xl mx-auto px-4 py-9 pb-16">
+    <div className={`${wide ? "max-w-4xl" : "max-w-xl"} mx-auto px-4 py-9 pb-16`}>
       <header className="flex items-center gap-3 mb-1">
         <img src="/logo.png" alt="Círculo VIP" className="w-8 h-8 rounded-lg flex-none object-cover" />
         <h1 className="font-display text-xl font-extrabold tracking-tight flex-1 dark:text-slate-100">Círculo Next</h1>

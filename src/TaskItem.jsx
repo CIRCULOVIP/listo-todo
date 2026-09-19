@@ -106,7 +106,7 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
           onChange={(e) => setTitle(e.target.value)}
           onBlur={() => title.trim() && title !== task.title && onRename(task, title.trim())}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          className={`flex-1 min-w-0 text-sm bg-transparent outline-none ${
+          className={`flex-1 min-w-[70px] text-sm bg-transparent outline-none ${
             task.done ? "line-through text-slate-400" : "text-slate-900 dark:text-slate-100"
           }`}
         />
