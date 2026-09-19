@@ -5,15 +5,24 @@ import InvitePanel from "./InvitePanel.jsx";
 import FolderNav from "./FolderNav.jsx";
 import TeamPanel from "./TeamPanel.jsx";
 
+const FILTERS = [
+  { id: "all", label: "Todas" },
+  { id: "mine", label: "Asignadas a mí" },
+  { id: "overdue", label: "Vencidas" },
+];
+
 export default function TaskBoard({ session }) {
   const [profile, setProfile] = useState(null);
   const [folders, setFolders] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
 
-  // Perfil + carpetas visibles (una sola vez por sesión)
+  // Perfil + carpetas visibles + equipo (una sola vez por sesión)
   useEffect(() => {
     let foldersChannel;
 
@@ -24,6 +33,12 @@ export default function TaskBoard({ session }) {
         .eq("id", session.user.id)
         .single();
       setProfile(profileData || null);
+
+      const { data: memberData } = await supabase
+        .from("listo_profiles")
+        .select("id, display_name")
+        .order("display_name", { ascending: true });
+      setTeamMembers(memberData || []);
 
       const { data: folderData } = await supabase.from("listo_folders").select("*").order("name", { ascending: true });
       const list = folderData || [];
@@ -150,6 +165,18 @@ export default function TaskBoard({ session }) {
     await supabase.from("listo_tasks").update({ due_date }).eq("id", task.id);
   }
 
+  async function setNotes(task, notes) {
+    setTasks((current) => current.map((t) => (t.id === task.id ? { ...t, notes } : t)));
+    await supabase.from("listo_tasks").update({ notes }).eq("id", task.id);
+  }
+
+  async function setAssignee(task, member) {
+    const assigned_to = member?.id || null;
+    const assigned_to_name = member?.display_name || null;
+    setTasks((current) => current.map((t) => (t.id === task.id ? { ...t, assigned_to, assigned_to_name } : t)));
+    await supabase.from("listo_tasks").update({ assigned_to, assigned_to_name }).eq("id", task.id);
+  }
+
   async function deleteTask(task) {
     setTasks((current) => current.filter((t) => t.id !== task.id));
     await supabase.from("listo_tasks").delete().eq("id", task.id);
@@ -168,7 +195,17 @@ export default function TaskBoard({ session }) {
     await supabase.auth.signOut();
   }
 
-  const sorted = [...tasks].sort((a, b) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const filtered = tasks.filter((t) => {
+    if (query.trim() && !t.title.toLowerCase().includes(query.trim().toLowerCase())) return false;
+    if (filter === "mine" && t.assigned_to !== session.user.id) return false;
+    if (filter === "overdue" && (!t.due_date || t.done || new Date(t.due_date + "T00:00:00") >= today)) return false;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
     if (!!a.done !== !!b.done) return a.done ? 1 : -1;
     return new Date(a.created_at) - new Date(b.created_at);
   });
@@ -201,7 +238,7 @@ export default function TaskBoard({ session }) {
         </>
       )}
 
-      <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-5">
+      <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-3">
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
@@ -214,20 +251,53 @@ export default function TaskBoard({ session }) {
         </button>
       </form>
 
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <div className="flex items-center gap-2 flex-1 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
+          <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-slate-400 flex-none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+            <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar tareas…"
+            className="flex-1 min-w-0 text-xs outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
+          />
+        </div>
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border flex-none ${
+              filter === f.id
+                ? "bg-accent text-white border-accent"
+                : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="text-sm text-slate-400 text-center py-10">Cargando…</p>
       ) : sorted.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-10">Sin tareas todavía.</p>
+        <p className="text-sm text-slate-400 text-center py-10">
+          {tasks.length === 0 ? "Sin tareas todavía." : "Nada coincide con la búsqueda/filtro."}
+        </p>
       ) : (
         <div className="flex flex-col gap-2">
           {sorted.map((task) => (
             <TaskItem
               key={task.id}
               task={task}
+              teamMembers={teamMembers}
               onToggle={toggleDone}
               onDelete={deleteTask}
               onRename={renameTask}
               onSetDueDate={setDueDate}
+              onSetNotes={setNotes}
+              onSetAssignee={setAssignee}
             />
           ))}
         </div>
