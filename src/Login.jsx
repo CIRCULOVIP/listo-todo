@@ -44,11 +44,7 @@ export default function Login() {
     <div className="min-h-full flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-lg p-7">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-indigo-300 flex items-center justify-center text-white flex-none">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="Círculo VIP" className="w-9 h-9 rounded-xl flex-none object-cover" />
           <h1 className="font-display text-2xl font-extrabold tracking-tight">Listo</h1>
         </div>
         <p className="text-sm text-slate-500 mb-6">Entrá con el email que te invitaron al equipo.</p>

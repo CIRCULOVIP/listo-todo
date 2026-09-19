@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import TaskItem from "./TaskItem.jsx";
 import InvitePanel from "./InvitePanel.jsx";
 import FolderNav from "./FolderNav.jsx";
+import TeamPanel from "./TeamPanel.jsx";
 
 export default function TaskBoard({ session }) {
   const [profile, setProfile] = useState(null);
@@ -172,11 +173,7 @@ export default function TaskBoard({ session }) {
   return (
     <div className="max-w-xl mx-auto px-4 py-9 pb-16">
       <header className="flex items-center gap-3 mb-1">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-indigo-300 flex items-center justify-center text-white flex-none">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        <img src="/logo.png" alt="Círculo VIP" className="w-8 h-8 rounded-lg flex-none object-cover" />
         <h1 className="font-display text-xl font-extrabold tracking-tight flex-1">Listo</h1>
         <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600">
           Salir ({session.user.email})
@@ -192,7 +189,12 @@ export default function TaskBoard({ session }) {
         session={session}
       />
 
-      {profile?.is_admin && <InvitePanel folders={folders} />}
+      {profile?.is_admin && (
+        <>
+          <TeamPanel folders={folders} />
+          <InvitePanel folders={folders} />
+        </>
+      )}
 
       <form onSubmit={addTask} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl shadow px-4 py-3 mb-5">
         <input
