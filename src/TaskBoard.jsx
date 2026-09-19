@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import TaskItem from "./TaskItem.jsx";
 import InvitePanel from "./InvitePanel.jsx";
+import FolderNav from "./FolderNav.jsx";
 
 export default function TaskBoard({ session }) {
   const [profile, setProfile] = useState(null);
+  const [folders, setFolders] = useState([]);
+  const [currentFolderId, setCurrentFolderId] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Perfil + carpetas visibles (una sola vez por sesión)
   useEffect(() => {
-    let channel;
+    let foldersChannel;
 
     async function load() {
       const { data: profileData } = await supabase
@@ -20,18 +24,53 @@ export default function TaskBoard({ session }) {
         .single();
       setProfile(profileData || null);
 
+      const { data: folderData } = await supabase.from("listo_folders").select("*").order("name", { ascending: true });
+      const list = folderData || [];
+      setFolders(list);
+      setCurrentFolderId((current) => current || list.find((f) => f.name === "General")?.id || list[0]?.id || null);
+
+      foldersChannel = supabase
+        .channel("listo_folders_changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "listo_folders" }, (payload) => {
+          setFolders((current) => {
+            if (payload.eventType === "INSERT") {
+              if (current.some((f) => f.id === payload.new.id)) return current;
+              return [...current, payload.new].sort((a, b) => a.name.localeCompare(b.name));
+            }
+            if (payload.eventType === "UPDATE") return current.map((f) => (f.id === payload.new.id ? payload.new : f));
+            if (payload.eventType === "DELETE") return current.filter((f) => f.id !== payload.old.id);
+            return current;
+          });
+        })
+        .subscribe();
+    }
+
+    load();
+    return () => {
+      if (foldersChannel) supabase.removeChannel(foldersChannel);
+    };
+  }, [session.user.id]);
+
+  // Tareas de la carpeta activa
+  useEffect(() => {
+    if (!currentFolderId) return;
+    let channel;
+    setLoading(true);
+
+    async function load() {
       const { data: taskData } = await supabase
         .from("listo_tasks")
         .select("*")
+        .eq("folder_id", currentFolderId)
         .order("created_at", { ascending: true });
       setTasks(taskData || []);
       setLoading(false);
 
       channel = supabase
-        .channel("listo_tasks_changes")
+        .channel(`listo_tasks_changes_${currentFolderId}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "listo_tasks" },
+          { event: "*", schema: "public", table: "listo_tasks", filter: `folder_id=eq.${currentFolderId}` },
           (payload) => {
             setTasks((current) => {
               if (payload.eventType === "INSERT") {
@@ -55,18 +94,19 @@ export default function TaskBoard({ session }) {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [session.user.id]);
+  }, [currentFolderId]);
 
   async function addTask(e) {
     e.preventDefault();
     const title = newTitle.trim();
-    if (!title) return;
+    if (!title || !currentFolderId) return;
     setNewTitle("");
 
     const optimistic = {
       id: `optimistic-${Date.now()}`,
       title,
       done: false,
+      folder_id: currentFolderId,
       created_by: session.user.id,
       created_by_email: session.user.email,
       created_by_name: profile?.display_name || session.user.email,
@@ -78,6 +118,7 @@ export default function TaskBoard({ session }) {
       .from("listo_tasks")
       .insert({
         title,
+        folder_id: currentFolderId,
         created_by: session.user.id,
         created_by_email: session.user.email,
         created_by_name: profile?.display_name || session.user.email,
@@ -143,7 +184,15 @@ export default function TaskBoard({ session }) {
       </header>
       <p className="text-xs text-slate-400 mb-5 ml-11">Se sincroniza en vivo con todo el equipo.</p>
 
-      {profile?.is_admin && <InvitePanel />}
+      <FolderNav
+        folders={folders}
+        currentFolderId={currentFolderId}
+        onSelect={setCurrentFolderId}
+        isAdmin={!!profile?.is_admin}
+        session={session}
+      />
+
+      {profile?.is_admin && <InvitePanel folders={folders} />}
 
       <form onSubmit={addTask} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl shadow px-4 py-3 mb-5">
         <input
