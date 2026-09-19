@@ -145,6 +145,11 @@ export default function TaskBoard({ session }) {
     await supabase.from("listo_tasks").update({ title }).eq("id", task.id);
   }
 
+  async function setDueDate(task, due_date) {
+    setTasks((current) => current.map((t) => (t.id === task.id ? { ...t, due_date } : t)));
+    await supabase.from("listo_tasks").update({ due_date }).eq("id", task.id);
+  }
+
   async function deleteTask(task) {
     setTasks((current) => current.filter((t) => t.id !== task.id));
     await supabase.from("listo_tasks").delete().eq("id", task.id);
@@ -174,8 +179,8 @@ export default function TaskBoard({ session }) {
     <div className="max-w-xl mx-auto px-4 py-9 pb-16">
       <header className="flex items-center gap-3 mb-1">
         <img src="/logo.png" alt="Círculo VIP" className="w-8 h-8 rounded-lg flex-none object-cover" />
-        <h1 className="font-display text-xl font-extrabold tracking-tight flex-1">Círculo Next</h1>
-        <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600">
+        <h1 className="font-display text-xl font-extrabold tracking-tight flex-1 dark:text-slate-100">Círculo Next</h1>
+        <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
           Salir ({session.user.email})
         </button>
       </header>
@@ -196,12 +201,12 @@ export default function TaskBoard({ session }) {
         </>
       )}
 
-      <form onSubmit={addTask} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl shadow px-4 py-3 mb-5">
+      <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-5">
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="Agregar una tarea…"
-          className="flex-1 min-w-0 text-sm outline-none"
+          className="flex-1 min-w-0 text-sm outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
           maxLength={300}
         />
         <button type="submit" className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 flex-none">
@@ -216,7 +221,14 @@ export default function TaskBoard({ session }) {
       ) : (
         <div className="flex flex-col gap-2">
           {sorted.map((task) => (
-            <TaskItem key={task.id} task={task} onToggle={toggleDone} onDelete={deleteTask} onRename={renameTask} />
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggle={toggleDone}
+              onDelete={deleteTask}
+              onRename={renameTask}
+              onSetDueDate={setDueDate}
+            />
           ))}
         </div>
       )}

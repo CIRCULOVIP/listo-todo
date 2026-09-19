@@ -42,7 +42,7 @@ export default function InvitePanel({ folders }) {
   }
 
   return (
-    <div className="border border-slate-200 bg-white rounded-xl p-4 mb-5">
+    <div className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl p-4 mb-5">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Invitar al equipo</p>
       <form onSubmit={handleInvite} className="space-y-3">
         <input
@@ -51,7 +51,7 @@ export default function InvitePanel({ folders }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="email@equipo.com"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
+          className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
         />
 
         <div>
@@ -65,7 +65,7 @@ export default function InvitePanel({ folders }) {
                 className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
                   selectedFolders.includes(f.id)
                     ? "bg-accent text-white border-accent"
-                    : "bg-white text-slate-500 border-slate-200 hover:border-accent"
+                    : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
                 }`}
               >
                 <span

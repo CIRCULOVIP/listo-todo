@@ -34,7 +34,7 @@ export default function FolderNav({ folders, currentFolderId, onSelect, isAdmin,
           className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
             f.id === currentFolderId
               ? "bg-accent text-white border-accent"
-              : "bg-white text-slate-500 border-slate-200 hover:border-accent"
+              : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
           }`}
         >
           <span
@@ -54,14 +54,14 @@ export default function FolderNav({ folders, currentFolderId, onSelect, isAdmin,
               onChange={(e) => setName(e.target.value)}
               onBlur={() => !name.trim() && setCreating(false)}
               placeholder="Nombre de la carpeta"
-              className="text-xs px-3 py-1.5 rounded-full border border-slate-200 outline-none focus:border-accent"
+              className="text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 outline-none focus:border-accent"
               maxLength={60}
             />
           </form>
         ) : (
           <button
             onClick={() => setCreating(true)}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-dashed border-slate-300 text-slate-400 hover:border-accent hover:text-accent"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:border-accent hover:text-accent"
           >
             + Carpeta
           </button>

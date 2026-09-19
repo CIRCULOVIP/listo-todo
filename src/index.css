@@ -12,3 +12,10 @@ body {
   background: #f6f7fb;
   color: #1b1e28;
 }
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #12141c;
+    color: #e7e9ee;
+  }
+}
