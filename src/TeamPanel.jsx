@@ -50,9 +50,17 @@ export default function TeamPanel({ folders, session }) {
   }
 
   async function removeFromTeam(p) {
-    if (!confirm(`¿Sacar a ${p.display_name} del equipo? Pierde acceso a todas las carpetas.`)) return;
+    if (!confirm(`¿Eliminar a ${p.display_name} del equipo? Se borra su cuenta y pierde acceso a todo. No se puede deshacer.`))
+      return;
+    const { data, error } = await supabase.functions.invoke("listo-remove-user", {
+      body: { userId: p.id },
+    });
+    if (error || data?.error) {
+      alert(data?.error || error.message);
+      return;
+    }
+    setProfiles((current) => current.filter((x) => x.id !== p.id));
     setMemberships((current) => current.filter((m) => m.user_id !== p.id));
-    await supabase.from("listo_folder_members").delete().eq("user_id", p.id);
   }
 
   async function toggleAdmin(p) {
