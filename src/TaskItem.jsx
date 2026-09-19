@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { initialsAvatar } from "./avatar";
+import { supabase } from "./supabaseClient";
 
 function dueStatus(task) {
   if (!task.due_date || task.done) return null;
@@ -23,7 +24,55 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
   const [notes, setNotes] = useState(task.notes || "");
   const [notesOpen, setNotesOpen] = useState(false);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
   const status = dueStatus(task);
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "nota.webm");
+          const { data, error } = await supabase.functions.invoke("listo-transcribe", { body: form });
+          if (error) throw error;
+          if (data?.text) {
+            const merged = ((notes ? notes + " " : "") + data.text).trim();
+            setNotes(merged);
+            setNotesOpen(true);
+            onSetNotes(task, merged || null);
+          } else if (data?.error) {
+            alert(data.error);
+          }
+        } catch {
+          alert("No se pudo transcribir el audio");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      alert("No se pudo acceder al micrófono");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
 
   return (
     <div
@@ -71,6 +120,27 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
               strokeLinejoin="round"
             />
           </svg>
+        </button>
+
+        <button
+          onClick={recording ? stopRecording : startRecording}
+          disabled={transcribing}
+          title={recording ? "Detener grabación" : transcribing ? "Transcribiendo…" : "Dictar nota por voz"}
+          className={`w-6 h-6 flex-none flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 ${
+            recording ? "text-danger animate-pulse" : transcribing ? "text-accent" : "text-slate-300"
+          }`}
+        >
+          {transcribing ? (
+            <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 animate-spin">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
+              <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5">
+              <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+              <path d="M5 11a7 7 0 0014 0M12 18v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
 
         <button
