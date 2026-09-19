@@ -4,6 +4,8 @@ import TaskItem from "./TaskItem.jsx";
 import InvitePanel from "./InvitePanel.jsx";
 import FolderNav from "./FolderNav.jsx";
 import TeamPanel from "./TeamPanel.jsx";
+import KanbanBoard from "./KanbanBoard.jsx";
+import ActivityLog from "./ActivityLog.jsx";
 
 const FILTERS = [
   { id: "all", label: "Todas" },
@@ -21,6 +23,8 @@ export default function TaskBoard({ session }) {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [boardView, setBoardView] = useState("list");
+  const [view, setView] = useState("board");
 
   // Perfil + carpetas visibles + equipo (una sola vez por sesión)
   useEffect(() => {
@@ -170,6 +174,13 @@ export default function TaskBoard({ session }) {
     await supabase.from("listo_tasks").update({ notes }).eq("id", task.id);
   }
 
+  async function setStatus(taskId, status) {
+    setTasks((current) =>
+      current.map((t) => (t.id === taskId ? { ...t, status, done: status === "done" } : t))
+    );
+    await supabase.from("listo_tasks").update({ status }).eq("id", taskId);
+  }
+
   async function setAssignee(task, member) {
     const assigned_to = member?.id || null;
     const assigned_to_name = member?.display_name || null;
@@ -217,81 +228,109 @@ export default function TaskBoard({ session }) {
       <header className="flex items-center gap-3 mb-1">
         <img src="/logo.png" alt="Círculo VIP" className="w-8 h-8 rounded-lg flex-none object-cover" />
         <h1 className="font-display text-xl font-extrabold tracking-tight flex-1 dark:text-slate-100">Círculo Next</h1>
+        {profile?.is_admin && view === "board" && (
+          <button
+            onClick={() => setView("activity")}
+            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            Actividad
+          </button>
+        )}
         <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
           Salir ({session.user.email})
         </button>
       </header>
       <p className="text-xs text-slate-400 mb-5 ml-11">Se sincroniza en vivo con todo el equipo.</p>
 
-      <FolderNav
-        folders={folders}
-        currentFolderId={currentFolderId}
-        onSelect={setCurrentFolderId}
-        isAdmin={!!profile?.is_admin}
-        session={session}
-      />
-
-      {profile?.is_admin && (
-        <>
-          <TeamPanel folders={folders} session={session} />
-          <InvitePanel folders={folders} />
-        </>
-      )}
-
-      <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-3">
-        <input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Agregar una tarea…"
-          className="flex-1 min-w-0 text-sm outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
-          maxLength={300}
-        />
-        <button type="submit" className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 flex-none">
-          Agregar
-        </button>
-      </form>
-
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
-          <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-slate-400 flex-none">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-            <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar tareas…"
-            className="flex-1 min-w-0 text-xs outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
-          />
-        </div>
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border flex-none ${
-              filter === f.id
-                ? "bg-accent text-white border-accent"
-                : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-slate-400 text-center py-10">Cargando…</p>
-      ) : sorted.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-10">
-          {tasks.length === 0 ? "Sin tareas todavía." : "Nada coincide con la búsqueda/filtro."}
-        </p>
+      {view === "activity" ? (
+        <ActivityLog folders={folders} defaultFolderId={currentFolderId} onBack={() => setView("board")} />
       ) : (
-        <div className="flex flex-col gap-2">
-          {sorted.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
+        <>
+          <FolderNav
+            folders={folders}
+            currentFolderId={currentFolderId}
+            onSelect={setCurrentFolderId}
+            isAdmin={!!profile?.is_admin}
+            session={session}
+          />
+
+          {profile?.is_admin && (
+            <>
+              <TeamPanel folders={folders} session={session} />
+              <InvitePanel folders={folders} />
+            </>
+          )}
+
+          <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-3">
+            <input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Agregar una tarea…"
+              className="flex-1 min-w-0 text-sm outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
+              maxLength={300}
+            />
+            <button type="submit" className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 flex-none">
+              Agregar
+            </button>
+          </form>
+
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
+              <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-slate-400 flex-none">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar tareas…"
+                className="flex-1 min-w-0 text-xs outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
+              />
+            </div>
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border flex-none ${
+                  filter === f.id
+                    ? "bg-accent text-white border-accent"
+                    : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+            <div className="flex items-center gap-1 flex-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5">
+              {[
+                { id: "list", label: "Lista" },
+                { id: "kanban", label: "Kanban" },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setBoardView(v.id)}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${
+                    boardView === v.id
+                      ? "bg-accent text-white"
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-slate-400 text-center py-10">Cargando…</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-10">
+              {tasks.length === 0 ? "Sin tareas todavía." : "Nada coincide con la búsqueda/filtro."}
+            </p>
+          ) : boardView === "kanban" ? (
+            <KanbanBoard
+              tasks={filtered}
               teamMembers={teamMembers}
+              onSetStatus={setStatus}
               onToggle={toggleDone}
               onDelete={deleteTask}
               onRename={renameTask}
@@ -299,21 +338,37 @@ export default function TaskBoard({ session }) {
               onSetNotes={setNotes}
               onSetAssignee={setAssignee}
             />
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="flex flex-col gap-2">
+              {sorted.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  teamMembers={teamMembers}
+                  onToggle={toggleDone}
+                  onDelete={deleteTask}
+                  onRename={renameTask}
+                  onSetDueDate={setDueDate}
+                  onSetNotes={setNotes}
+                  onSetAssignee={setAssignee}
+                />
+              ))}
+            </div>
+          )}
 
-      <div className="flex items-center justify-between mt-4 px-1">
-        <span className="text-xs text-slate-400">
-          {pending} pendiente{pending === 1 ? "" : "s"}
-          {done ? ` · ${done} completada${done === 1 ? "" : "s"}` : ""}
-        </span>
-        {done > 0 && (
-          <button onClick={clearCompleted} className="text-xs text-slate-400 hover:text-danger">
-            Borrar completadas
-          </button>
-        )}
-      </div>
+          <div className="flex items-center justify-between mt-4 px-1">
+            <span className="text-xs text-slate-400">
+              {pending} pendiente{pending === 1 ? "" : "s"}
+              {done ? ` · ${done} completada${done === 1 ? "" : "s"}` : ""}
+            </span>
+            {done > 0 && (
+              <button onClick={clearCompleted} className="text-xs text-slate-400 hover:text-danger">
+                Borrar completadas
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
