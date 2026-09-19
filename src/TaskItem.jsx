@@ -46,8 +46,14 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
           const form = new FormData();
           form.append("audio", blob, "nota.webm");
           const { data, error } = await supabase.functions.invoke("listo-transcribe", { body: form });
-          if (error) throw error;
-          if (data?.text) {
+          if (error) {
+            let message = error.message || "No se pudo transcribir el audio";
+            try {
+              const body = await error.context?.json();
+              if (body?.error) message = body.error;
+            } catch {}
+            alert(message);
+          } else if (data?.text) {
             const merged = ((notes ? notes + " " : "") + data.text).trim();
             setNotes(merged);
             setNotesOpen(true);
