@@ -45,7 +45,7 @@ export default function Login() {
       <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-lg p-7">
         <div className="flex items-center gap-3 mb-1">
           <img src="/logo.png" alt="Círculo VIP" className="w-9 h-9 rounded-xl flex-none object-cover" />
-          <h1 className="font-display text-2xl font-extrabold tracking-tight">Listo</h1>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight">Círculo Next</h1>
         </div>
         <p className="text-sm text-slate-500 mb-6">Entrá con el email que te invitaron al equipo.</p>
 

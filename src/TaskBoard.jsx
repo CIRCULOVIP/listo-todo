@@ -174,7 +174,7 @@ export default function TaskBoard({ session }) {
     <div className="max-w-xl mx-auto px-4 py-9 pb-16">
       <header className="flex items-center gap-3 mb-1">
         <img src="/logo.png" alt="Círculo VIP" className="w-8 h-8 rounded-lg flex-none object-cover" />
-        <h1 className="font-display text-xl font-extrabold tracking-tight flex-1">Listo</h1>
+        <h1 className="font-display text-xl font-extrabold tracking-tight flex-1">Círculo Next</h1>
         <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600">
           Salir ({session.user.email})
         </button>

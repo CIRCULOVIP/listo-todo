@@ -1,4 +1,4 @@
-# Listo — to do compartido del equipo
+# Círculo Next — to do compartido del equipo
 
 React + Vite + Supabase (Auth con magic link + Postgres Realtime).
 
