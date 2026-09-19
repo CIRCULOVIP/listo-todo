@@ -21,8 +21,16 @@ export default function TeamPanel({ folders, session }) {
       setMemberships(memberData || []);
     }
     load();
+
+    const channel = supabase
+      .channel("listo_team_panel_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "listo_profiles" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "listo_folder_members" }, load)
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [open]);
 
