@@ -386,6 +386,8 @@ export default function TaskBoard({ session }) {
           </div>
         </>
       )}
+
+      <p className="text-center text-[11px] text-slate-300 dark:text-slate-600 mt-8">Created by: Círculo VIP IA</p>
     </div>
   );
 }
