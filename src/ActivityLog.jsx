@@ -30,17 +30,65 @@ function describe(entry) {
   return `${who} ${label}${target ? ` "${target}"` : ""}${folder}${extra}`;
 }
 
+const ACTION_SHORT = {
+  created: "Creó",
+  completed: "Completó",
+  reopened: "Reabrió",
+  renamed: "Renombró",
+  assigned: "Asignó",
+  unassigned: "Quitó asignación",
+  due_date_set: "Cambió fecha",
+  status_changed: "Movió estado",
+  deleted: "Borró",
+  folder_access_granted: "Dio acceso",
+  folder_access_revoked: "Quitó acceso",
+  admin_promoted: "Hizo admin",
+  admin_demoted: "Quitó admin",
+  invited: "Invitó",
+  invite_resent: "Reenvió invitación",
+  team_member_removed: "Sacó del equipo",
+};
+
+function extraDetail(entry) {
+  const d = entry.details || {};
+  switch (entry.action) {
+    case "renamed":
+      return d.from ? `antes: "${d.from}"` : "";
+    case "status_changed":
+      return d.from && d.to ? `${d.from} → ${d.to}` : "";
+    case "due_date_set":
+      return d.due_date || "";
+    case "folder_access_granted":
+    case "folder_access_revoked":
+      return d.folder || "";
+    default:
+      return "";
+  }
+}
+
+function formatFecha(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function csvField(value) {
   const str = String(value ?? "");
-  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  return /[";\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
 function exportCsv(entries, scopeLabel) {
   const rows = [
-    ["Fecha", "Persona", "Detalle"],
-    ...entries.map((e) => [new Date(e.created_at).toLocaleString("es-CL"), e.actor_name || "Alguien", describe(e)]),
+    ["Fecha", "Persona", "Acción", "Tarea", "Detalle"],
+    ...entries.map((e) => [
+      formatFecha(e.created_at),
+      e.actor_name || "Alguien",
+      ACTION_SHORT[e.action] || e.action,
+      e.task_title || e.details?.to || "",
+      extraDetail(e),
+    ]),
   ];
-  const csv = rows.map((r) => r.map(csvField).join(",")).join("\n");
+  const csv = rows.map((r) => r.map(csvField).join(";")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
