@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import TaskItem from "./TaskItem.jsx";
 import InvitePanel from "./InvitePanel.jsx";
 import FolderNav from "./FolderNav.jsx";
+import FolderManager from "./FolderManager.jsx";
 import TeamPanel from "./TeamPanel.jsx";
 import KanbanBoard from "./KanbanBoard.jsx";
 import ActivityLog from "./ActivityLog.jsx";
@@ -70,6 +71,13 @@ export default function TaskBoard({ session }) {
       if (foldersChannel) supabase.removeChannel(foldersChannel);
     };
   }, [session.user.id]);
+
+  // Si la carpeta activa se borró, saltar a otra disponible
+  useEffect(() => {
+    if (!folders.length) return;
+    if (currentFolderId && folders.some((f) => f.id === currentFolderId)) return;
+    setCurrentFolderId(folders.find((f) => f.name === "General")?.id || folders[0].id);
+  }, [folders, currentFolderId]);
 
   // Tareas de la carpeta activa
   useEffect(() => {
@@ -258,6 +266,7 @@ export default function TaskBoard({ session }) {
 
           {profile?.is_admin && (
             <>
+              <FolderManager folders={folders} />
               <TeamPanel folders={folders} session={session} />
               <InvitePanel folders={folders} />
             </>
