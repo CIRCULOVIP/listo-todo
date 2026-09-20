@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { initialsAvatar } from "./avatar";
+import { avatarSrc } from "./avatar";
 
 export default function TeamPanel({ folders, session }) {
   const [open, setOpen] = useState(false);
@@ -126,7 +126,7 @@ export default function TeamPanel({ folders, session }) {
           {profiles.map((p) => (
             <div key={p.id} className="py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-2 mb-2">
-                <img src={initialsAvatar(p.display_name)} alt="" className="w-6 h-6 rounded-full flex-none" />
+                <img src={avatarSrc(p)} alt="" className="w-6 h-6 rounded-full flex-none object-cover" />
                 {editingId === p.id ? (
                   <input
                     autoFocus

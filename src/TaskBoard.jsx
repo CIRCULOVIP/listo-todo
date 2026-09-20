@@ -5,6 +5,7 @@ import InvitePanel from "./InvitePanel.jsx";
 import FolderNav from "./FolderNav.jsx";
 import FolderManager from "./FolderManager.jsx";
 import TeamPanel from "./TeamPanel.jsx";
+import ProfileMenu from "./ProfileMenu.jsx";
 import KanbanBoard from "./KanbanBoard.jsx";
 import ActivityLog from "./ActivityLog.jsx";
 
@@ -249,6 +250,11 @@ export default function TaskBoard({ session }) {
         <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
           Salir ({session.user.email})
         </button>
+        <ProfileMenu
+          session={session}
+          profile={profile}
+          onUpdated={(avatar_url) => setProfile((current) => ({ ...current, avatar_url }))}
+        />
       </header>
       <p className="text-xs text-slate-400 mb-5 ml-11">Se sincroniza en vivo con todo el equipo.</p>
 

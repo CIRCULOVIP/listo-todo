@@ -17,3 +17,7 @@ export function initialsAvatar(name) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" rx="20" fill="${color}"/><text x="20" y="26" font-family="Work Sans,sans-serif" font-size="16" fill="#fff" text-anchor="middle">${letter}</text></svg>`;
   return "data:image/svg+xml;base64," + btoa(svg);
 }
+
+export function avatarSrc(profile) {
+  return profile?.avatar_url || initialsAvatar(profile?.display_name || profile?.email || "?");
+}
