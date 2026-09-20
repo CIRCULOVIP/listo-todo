@@ -103,21 +103,24 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [clearBefore, setClearBefore] = useState("");
 
   const scopeLabel = folderId === "all" ? "todas las carpetas" : folders.find((f) => f.id === folderId)?.name || "esta carpeta";
 
-  async function clearLog() {
-    if (!confirm(`¿Borrar todo el historial de actividad de ${scopeLabel}? No se puede deshacer.`)) return;
+  async function clearOlderThan() {
+    if (!clearBefore) return;
+    if (!confirm(`¿Borrar el historial de ${scopeLabel} anterior al ${clearBefore}? No se puede deshacer.`)) return;
     setClearing(true);
-    let q = supabase.from("listo_activity_log").delete();
-    q = folderId === "all" ? q.not("id", "is", null) : q.eq("folder_id", folderId);
+    const cutoff = `${clearBefore}T00:00:00`;
+    let q = supabase.from("listo_activity_log").delete().lt("created_at", cutoff);
+    if (folderId !== "all") q = q.eq("folder_id", folderId);
     const { error } = await q;
     setClearing(false);
     if (error) {
       alert(error.message);
       return;
     }
-    setEntries([]);
+    setEntries((current) => current.filter((e) => new Date(e.created_at) >= new Date(cutoff)));
   }
 
   useEffect(() => {
@@ -168,12 +171,18 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
         >
           Exportar CSV
         </button>
+        <input
+          type="date"
+          value={clearBefore}
+          onChange={(e) => setClearBefore(e.target.value)}
+          className="text-[11px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 dark:text-slate-200 outline-none [color-scheme:light] dark:[color-scheme:dark]"
+        />
         <button
-          onClick={clearLog}
-          disabled={clearing || entries.length === 0}
+          onClick={clearOlderThan}
+          disabled={clearing || !clearBefore}
           className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-danger disabled:opacity-40"
         >
-          {clearing ? "Borrando…" : "Borrar historial"}
+          {clearing ? "Borrando…" : "Borrar anteriores"}
         </button>
       </div>
 
