@@ -41,10 +41,11 @@ export default function ProfileMenu({ session, profile, onUpdated }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-9 z-20 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate mb-2">
+        <div className="absolute right-0 top-9 z-20 w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
             {profile?.display_name || session.user.email}
           </p>
+          <p className="text-[11px] text-slate-400 truncate mb-2">{session.user.email}</p>
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -53,6 +54,14 @@ export default function ProfileMenu({ session, profile, onUpdated }) {
             {uploading ? "Subiendo…" : "Cambiar foto"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2">
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="w-full text-left text-[11px] text-slate-400 hover:text-danger"
+            >
+              Salir
+            </button>
+          </div>
         </div>
       )}
     </div>

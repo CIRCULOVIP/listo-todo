@@ -211,10 +211,6 @@ export default function TaskBoard({ session }) {
     await supabase.from("listo_tasks").delete().in("id", done.map((t) => t.id));
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -247,9 +243,6 @@ export default function TaskBoard({ session }) {
             Actividad
           </button>
         )}
-        <button onClick={signOut} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          Salir ({session.user.email})
-        </button>
         <ProfileMenu
           session={session}
           profile={profile}
