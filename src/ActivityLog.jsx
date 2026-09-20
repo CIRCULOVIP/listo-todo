@@ -30,10 +30,47 @@ function describe(entry) {
   return `${who} ${label}${target ? ` "${target}"` : ""}${folder}${extra}`;
 }
 
+function csvField(value) {
+  const str = String(value ?? "");
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function exportCsv(entries, scopeLabel) {
+  const rows = [
+    ["Fecha", "Persona", "Detalle"],
+    ...entries.map((e) => [new Date(e.created_at).toLocaleString("es-CL"), e.actor_name || "Alguien", describe(e)]),
+  ];
+  const csv = rows.map((r) => r.map(csvField).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `actividad-${scopeLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ActivityLog({ folders, defaultFolderId, onBack }) {
   const [folderId, setFolderId] = useState(defaultFolderId || "all");
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+
+  const scopeLabel = folderId === "all" ? "todas las carpetas" : folders.find((f) => f.id === folderId)?.name || "esta carpeta";
+
+  async function clearLog() {
+    if (!confirm(`¿Borrar todo el historial de actividad de ${scopeLabel}? No se puede deshacer.`)) return;
+    setClearing(true);
+    let q = supabase.from("listo_activity_log").delete();
+    q = folderId === "all" ? q.not("id", "is", null) : q.eq("folder_id", folderId);
+    const { error } = await q;
+    setClearing(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setEntries([]);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +110,23 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 justify-end">
+        <button
+          onClick={() => exportCsv(entries, scopeLabel.replace(/\s+/g, "-"))}
+          disabled={entries.length === 0}
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-40"
+        >
+          Exportar CSV
+        </button>
+        <button
+          onClick={clearLog}
+          disabled={clearing || entries.length === 0}
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-danger disabled:opacity-40"
+        >
+          {clearing ? "Borrando…" : "Borrar historial"}
+        </button>
       </div>
 
       {loading ? (
