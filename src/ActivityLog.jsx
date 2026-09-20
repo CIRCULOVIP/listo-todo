@@ -103,16 +103,16 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
-  const [fromDate, setFromDate] = useState("");
+  const [untilDate, setUntilDate] = useState("");
 
   const scopeLabel = folderId === "all" ? "todas las carpetas" : folders.find((f) => f.id === folderId)?.name || "esta carpeta";
 
-  async function clearOlderThan() {
-    if (!fromDate) return;
-    if (!confirm(`¿Borrar el historial de ${scopeLabel} anterior al ${fromDate}? No se puede deshacer.`)) return;
+  async function clearUpTo() {
+    if (!untilDate) return;
+    if (!confirm(`¿Borrar el historial de ${scopeLabel} hasta el ${untilDate} (inclusive)? No se puede deshacer.`)) return;
     setClearing(true);
-    const cutoff = `${fromDate}T00:00:00`;
-    let q = supabase.from("listo_activity_log").delete().lt("created_at", cutoff);
+    const cutoff = `${untilDate}T23:59:59`;
+    let q = supabase.from("listo_activity_log").delete().lte("created_at", cutoff);
     if (folderId !== "all") q = q.eq("folder_id", folderId);
     const { error } = await q;
     setClearing(false);
@@ -120,7 +120,7 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
       alert(error.message);
       return;
     }
-    setEntries((current) => current.filter((e) => new Date(e.created_at) >= new Date(cutoff)));
+    setEntries((current) => current.filter((e) => new Date(e.created_at) > new Date(cutoff)));
   }
 
   async function deleteEntry(id) {
@@ -136,7 +136,7 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
     async function load() {
       let q = supabase.from("listo_activity_log").select("*").order("created_at", { ascending: false }).limit(150);
       if (folderId !== "all") q = q.eq("folder_id", folderId);
-      if (fromDate) q = q.gte("created_at", `${fromDate}T00:00:00`);
+      if (untilDate) q = q.lte("created_at", `${untilDate}T23:59:59`);
       const { data } = await q;
       if (!cancelled) {
         setEntries(data || []);
@@ -147,7 +147,7 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
     return () => {
       cancelled = true;
     };
-  }, [folderId, fromDate]);
+  }, [folderId, untilDate]);
 
   return (
     <div>
@@ -180,26 +180,26 @@ export default function ActivityLog({ folders, defaultFolderId, onBack }) {
         </button>
         <input
           type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          title="Mostrar desde esta fecha"
+          value={untilDate}
+          onChange={(e) => setUntilDate(e.target.value)}
+          title="Mostrar hasta esta fecha (hacia atrás)"
           className="text-[11px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 dark:text-slate-200 outline-none [color-scheme:light] dark:[color-scheme:dark]"
         />
-        {fromDate && (
+        {untilDate && (
           <button
-            onClick={() => setFromDate("")}
+            onClick={() => setUntilDate("")}
             className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
           >
             Ver todo
           </button>
         )}
         <button
-          onClick={clearOlderThan}
-          disabled={clearing || !fromDate}
-          title="Borra todo lo anterior a la fecha elegida"
+          onClick={clearUpTo}
+          disabled={clearing || !untilDate}
+          title="Borra todo lo anterior a la fecha elegida (inclusive)"
           className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-danger disabled:opacity-40"
         >
-          {clearing ? "Borrando…" : "Borrar anteriores"}
+          {clearing ? "Borrando…" : "Borrar hasta esta fecha"}
         </button>
       </div>
 
