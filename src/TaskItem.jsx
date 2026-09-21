@@ -113,12 +113,14 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
 
         <button
           onClick={() => setNotesOpen((v) => !v)}
-          title="Notas"
-          className={`w-6 h-6 flex-none flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 ${
-            task.notes ? "text-accent" : "text-slate-300"
+          title={task.notes ? "Ver nota" : "Agregar nota"}
+          className={`relative w-6 h-6 flex-none flex items-center justify-center rounded-md ${
+            task.notes
+              ? "bg-accent text-white shadow-sm"
+              : "text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
           }`}
         >
-          <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5">
+          <svg viewBox="0 0 24 24" fill={task.notes ? "currentColor" : "none"} className="w-3.5 h-3.5">
             <path
               d="M6 4h12v13l-4 3-2-1.5L10 20l-4-3V4z"
               stroke="currentColor"
