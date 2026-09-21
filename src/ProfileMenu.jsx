@@ -1,11 +1,18 @@
 import { useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { avatarSrc } from "./avatar";
+import { getTheme, setTheme } from "./theme";
 
 export default function ProfileMenu({ session, profile, onUpdated }) {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [theme, setThemeState] = useState(getTheme());
   const fileRef = useRef(null);
+
+  function chooseTheme(next) {
+    setTheme(next);
+    setThemeState(next);
+  }
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -54,6 +61,27 @@ export default function ProfileMenu({ session, profile, onUpdated }) {
             {uploading ? "Subiendo…" : "Cambiar foto"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+
+          <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1.5">Tema</p>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg p-0.5">
+              {[
+                { id: "dark", label: "Oscuro" },
+                { id: "light", label: "Claro" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => chooseTheme(t.id)}
+                  className={`flex-1 text-[11px] font-semibold py-1 rounded-md ${
+                    theme === t.id ? "bg-accent text-white" : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2">
             <button
               onClick={() => supabase.auth.signOut()}
