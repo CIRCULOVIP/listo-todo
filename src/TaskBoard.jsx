@@ -18,7 +18,8 @@ const FILTERS = [
 export default function TaskBoard({ session }) {
   const [profile, setProfile] = useState(null);
   const [folders, setFolders] = useState([]);
-  const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [selectedFolderIds, setSelectedFolderIds] = useState([]);
+  const [addFolderId, setAddFolderId] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [newTitle, setNewTitle] = useState("");
@@ -27,6 +28,9 @@ export default function TaskBoard({ session }) {
   const [filter, setFilter] = useState("all");
   const [boardView, setBoardView] = useState("list");
   const [view, setView] = useState("board");
+
+  const folderKey = [...selectedFolderIds].sort().join(",");
+  const foldersById = Object.fromEntries(folders.map((f) => [f.id, f]));
 
   // Perfil + carpetas visibles + equipo (una sola vez por sesión)
   useEffect(() => {
@@ -43,7 +47,7 @@ export default function TaskBoard({ session }) {
       const { data: folderData } = await supabase.from("listo_folders").select("*").order("name", { ascending: true });
       const list = folderData || [];
       setFolders(list);
-      setCurrentFolderId((current) => current || list.find((f) => f.name === "General")?.id || list[0]?.id || null);
+      setSelectedFolderIds((current) => (current.length ? current : list.map((f) => f.id)));
 
       foldersChannel = supabase
         .channel("listo_folders_changes")
@@ -67,22 +71,38 @@ export default function TaskBoard({ session }) {
     };
   }, [session.user.id]);
 
-  // Si la carpeta activa se borró, saltar a otra disponible
+  // Si alguna carpeta seleccionada se borró, sacarla de la selección
   useEffect(() => {
     if (!folders.length) return;
-    if (currentFolderId && folders.some((f) => f.id === currentFolderId)) return;
-    setCurrentFolderId(folders.find((f) => f.name === "General")?.id || folders[0].id);
-  }, [folders, currentFolderId]);
+    const validIds = new Set(folders.map((f) => f.id));
+    setSelectedFolderIds((current) => {
+      const filtered = current.filter((id) => validIds.has(id));
+      if (filtered.length) return filtered.length === current.length ? current : filtered;
+      return folders.map((f) => f.id);
+    });
+  }, [folders]);
 
-  // Equipo con acceso a la carpeta activa (para el selector de "asignar a")
+  // La carpeta destino para tareas nuevas siempre tiene que estar entre las seleccionadas
   useEffect(() => {
-    if (!currentFolderId) return;
+    if (!selectedFolderIds.length) {
+      setAddFolderId(null);
+      return;
+    }
+    setAddFolderId((current) => (current && selectedFolderIds.includes(current) ? current : selectedFolderIds[0]));
+  }, [folderKey]);
+
+  // Equipo con acceso a las carpetas seleccionadas (para el selector de "asignar a")
+  useEffect(() => {
+    if (!selectedFolderIds.length) {
+      setTeamMembers([]);
+      return;
+    }
     let cancelled = false;
 
     async function loadMembers() {
       const [{ data: profilesData }, { data: memberRows }] = await Promise.all([
         supabase.from("listo_profiles").select("id, display_name, is_admin"),
-        supabase.from("listo_folder_members").select("user_id").eq("folder_id", currentFolderId),
+        supabase.from("listo_folder_members").select("user_id").in("folder_id", selectedFolderIds),
       ]);
       if (cancelled) return;
       const memberIds = new Set((memberRows || []).map((m) => m.user_id));
@@ -95,11 +115,16 @@ export default function TaskBoard({ session }) {
     return () => {
       cancelled = true;
     };
-  }, [currentFolderId]);
+  }, [folderKey]);
 
-  // Tareas de la carpeta activa
+  // Tareas de las carpetas seleccionadas
   useEffect(() => {
-    if (!currentFolderId) return;
+    if (!selectedFolderIds.length) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+    const idsAtSubscribe = new Set(selectedFolderIds);
     let channel;
     setLoading(true);
 
@@ -107,32 +132,30 @@ export default function TaskBoard({ session }) {
       const { data: taskData } = await supabase
         .from("listo_tasks")
         .select("*")
-        .eq("folder_id", currentFolderId)
+        .in("folder_id", selectedFolderIds)
         .order("created_at", { ascending: true });
       setTasks(taskData || []);
       setLoading(false);
 
       channel = supabase
-        .channel(`listo_tasks_changes_${currentFolderId}`)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "listo_tasks", filter: `folder_id=eq.${currentFolderId}` },
-          (payload) => {
-            setTasks((current) => {
-              if (payload.eventType === "INSERT") {
-                if (current.some((t) => t.id === payload.new.id)) return current;
-                return [...current, payload.new];
-              }
-              if (payload.eventType === "UPDATE") {
-                return current.map((t) => (t.id === payload.new.id ? payload.new : t));
-              }
-              if (payload.eventType === "DELETE") {
-                return current.filter((t) => t.id !== payload.old.id);
-              }
-              return current;
-            });
-          }
-        )
+        .channel(`listo_tasks_changes_${folderKey}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "listo_tasks" }, (payload) => {
+          const row = payload.new?.id ? payload.new : payload.old;
+          if (!idsAtSubscribe.has(row.folder_id)) return;
+          setTasks((current) => {
+            if (payload.eventType === "INSERT") {
+              if (current.some((t) => t.id === payload.new.id)) return current;
+              return [...current, payload.new];
+            }
+            if (payload.eventType === "UPDATE") {
+              return current.map((t) => (t.id === payload.new.id ? payload.new : t));
+            }
+            if (payload.eventType === "DELETE") {
+              return current.filter((t) => t.id !== payload.old.id);
+            }
+            return current;
+          });
+        })
         .subscribe();
     }
 
@@ -140,19 +163,19 @@ export default function TaskBoard({ session }) {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [currentFolderId]);
+  }, [folderKey]);
 
   async function addTask(e) {
     e.preventDefault();
     const title = newTitle.trim();
-    if (!title || !currentFolderId) return;
+    if (!title || !addFolderId) return;
     setNewTitle("");
 
     const optimistic = {
       id: `optimistic-${Date.now()}`,
       title,
       done: false,
-      folder_id: currentFolderId,
+      folder_id: addFolderId,
       created_by: session.user.id,
       created_by_email: session.user.email,
       created_by_name: profile?.display_name || session.user.email,
@@ -164,7 +187,7 @@ export default function TaskBoard({ session }) {
       .from("listo_tasks")
       .insert({
         title,
-        folder_id: currentFolderId,
+        folder_id: addFolderId,
         created_by: session.user.id,
         created_by_email: session.user.email,
         created_by_name: profile?.display_name || session.user.email,
@@ -269,13 +292,18 @@ export default function TaskBoard({ session }) {
       <p className="text-xs text-slate-400 mb-5 ml-11">Se sincroniza en vivo con todo el equipo.</p>
 
       {view === "activity" ? (
-        <ActivityLog folders={folders} defaultFolderId={currentFolderId} onBack={() => setView("board")} />
+        <ActivityLog folders={folders} onBack={() => setView("board")} />
       ) : (
         <>
           <FolderNav
             folders={folders}
-            currentFolderId={currentFolderId}
-            onSelect={setCurrentFolderId}
+            selectedFolderIds={selectedFolderIds}
+            onToggle={(id) =>
+              setSelectedFolderIds((current) =>
+                current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+              )
+            }
+            onSelectAll={() => setSelectedFolderIds(folders.map((f) => f.id))}
             isAdmin={!!profile?.is_admin}
             session={session}
           />
@@ -288,7 +316,20 @@ export default function TaskBoard({ session }) {
             </>
           )}
 
-          <form onSubmit={addTask} className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-3">
+          <form onSubmit={addTask} className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow px-4 py-3 mb-3">
+            {selectedFolderIds.length > 1 && (
+              <select
+                value={addFolderId || ""}
+                onChange={(e) => setAddFolderId(e.target.value)}
+                className="text-xs bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-1.5 outline-none flex-none"
+              >
+                {selectedFolderIds.map((id) => (
+                  <option key={id} value={id}>
+                    {foldersById[id]?.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
@@ -357,6 +398,7 @@ export default function TaskBoard({ session }) {
             <KanbanBoard
               tasks={filtered}
               teamMembers={teamMembers}
+              foldersById={selectedFolderIds.length > 1 ? foldersById : undefined}
               onSetStatus={setStatus}
               onToggle={toggleDone}
               onDelete={deleteTask}
@@ -372,6 +414,7 @@ export default function TaskBoard({ session }) {
                   key={task.id}
                   task={task}
                   teamMembers={teamMembers}
+                  folder={selectedFolderIds.length > 1 ? foldersById[task.folder_id] : undefined}
                   onToggle={toggleDone}
                   onDelete={deleteTask}
                   onRename={renameTask}

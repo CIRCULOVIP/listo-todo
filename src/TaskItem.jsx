@@ -19,7 +19,7 @@ const STATUS_DOT = {
   red: "bg-danger",
 };
 
-export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRename, onSetDueDate, onSetNotes, onSetAssignee }) {
+export default function TaskItem({ task, teamMembers, folder, onToggle, onDelete, onRename, onSetDueDate, onSetNotes, onSetAssignee }) {
   const [title, setTitle] = useState(task.title);
   const [notes, setNotes] = useState(task.notes || "");
   const [notesOpen, setNotesOpen] = useState(false);
@@ -163,6 +163,15 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
       </div>
 
       <div className="flex items-center gap-2 mt-2 pl-8">
+        {folder && (
+          <span
+            className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex-none"
+            title={folder.name}
+          >
+            <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: folder.color }} />
+            {folder.name}
+          </span>
+        )}
         {status && (
           <span
             className={`w-2 h-2 rounded-full flex-none ${STATUS_DOT[status]}`}

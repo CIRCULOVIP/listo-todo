@@ -10,7 +10,7 @@ function statusOf(task) {
   return task.status || (task.done ? "done" : "todo");
 }
 
-export default function KanbanBoard({ tasks, teamMembers, onSetStatus, ...taskHandlers }) {
+export default function KanbanBoard({ tasks, teamMembers, foldersById, onSetStatus, ...taskHandlers }) {
   function handleDrop(e, status) {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("text/plain");
@@ -40,7 +40,7 @@ export default function KanbanBoard({ tasks, teamMembers, onSetStatus, ...taskHa
                   onDragStart={(e) => e.dataTransfer.setData("text/plain", task.id)}
                   className="cursor-grab active:cursor-grabbing"
                 >
-                  <TaskItem task={task} teamMembers={teamMembers} {...taskHandlers} />
+                  <TaskItem task={task} teamMembers={teamMembers} folder={foldersById?.[task.folder_id]} {...taskHandlers} />
                 </div>
               ))}
               {colTasks.length === 0 && (

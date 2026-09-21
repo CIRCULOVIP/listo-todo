@@ -3,9 +3,11 @@ import { supabase } from "./supabaseClient";
 
 const COLORS = ["#3654D8", "#DD5B45", "#2E9E6B", "#B3742E", "#7C4DB0", "#2E8FB0"];
 
-export default function FolderNav({ folders, currentFolderId, onSelect, isAdmin, session }) {
+export default function FolderNav({ folders, selectedFolderIds, onToggle, onSelectAll, isAdmin, session }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+
+  const allSelected = folders.length > 0 && selectedFolderIds.length === folders.length;
 
   async function createFolder(e) {
     e.preventDefault();
@@ -19,7 +21,7 @@ export default function FolderNav({ folders, currentFolderId, onSelect, isAdmin,
       .single();
     if (!error && data) {
       await supabase.from("listo_folder_members").insert({ folder_id: data.id, user_id: session.user.id });
-      onSelect(data.id);
+      onToggle(data.id);
     }
     setName("");
     setCreating(false);
@@ -27,23 +29,34 @@ export default function FolderNav({ folders, currentFolderId, onSelect, isAdmin,
 
   return (
     <div className="flex items-center gap-2 mb-5 flex-wrap">
-      {folders.map((f) => (
-        <button
-          key={f.id}
-          onClick={() => onSelect(f.id)}
-          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
-            f.id === currentFolderId
-              ? "bg-accent text-white border-accent"
-              : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
-          }`}
-        >
-          <span
-            className="w-2 h-2 rounded-full flex-none"
-            style={{ background: f.id === currentFolderId ? "#fff" : f.color }}
-          />
-          {f.name}
-        </button>
-      ))}
+      <button
+        onClick={onSelectAll}
+        className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${
+          allSelected
+            ? "bg-accent text-white border-accent"
+            : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
+        }`}
+      >
+        Todas
+      </button>
+
+      {folders.map((f) => {
+        const active = selectedFolderIds.includes(f.id);
+        return (
+          <button
+            key={f.id}
+            onClick={() => onToggle(f.id)}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
+              active
+                ? "bg-accent text-white border-accent"
+                : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-accent"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full flex-none" style={{ background: active ? "#fff" : f.color }} />
+            {f.name}
+          </button>
+        );
+      })}
 
       {isAdmin &&
         (creating ? (
