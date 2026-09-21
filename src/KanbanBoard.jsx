@@ -1,9 +1,9 @@
 import TaskItem from "./TaskItem.jsx";
 
 const COLUMNS = [
-  { id: "todo", label: "Por hacer" },
-  { id: "in_progress", label: "En curso" },
-  { id: "done", label: "Hecho" },
+  { id: "todo", label: "Por hacer", dot: "bg-slate-400" },
+  { id: "in_progress", label: "En curso", dot: "bg-amber-400" },
+  { id: "done", label: "Hecho", dot: "bg-done" },
 ];
 
 function statusOf(task) {
@@ -28,7 +28,8 @@ export default function KanbanBoard({ tasks, teamMembers, onSetStatus, ...taskHa
             onDrop={(e) => handleDrop(e, col.id)}
             className="bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-2 min-h-[140px]"
           >
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 px-1 mb-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400 px-1 mb-2">
+              <span className={`w-2 h-2 rounded-full flex-none ${col.dot}`} />
               {col.label} · {colTasks.length}
             </p>
             <div className="flex flex-col gap-2">
