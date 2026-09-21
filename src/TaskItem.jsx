@@ -29,6 +29,7 @@ export default function TaskItem({ task, teamMembers, folder, onToggle, onDelete
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const status = dueStatus(task);
+  const inProgress = !task.done && task.status === "in_progress";
 
   async function startRecording() {
     try {
@@ -89,8 +90,13 @@ export default function TaskItem({ task, teamMembers, folder, onToggle, onDelete
       <div className="flex items-center gap-3">
         <button
           onClick={() => onToggle(task)}
+          title={inProgress ? "En curso" : undefined}
           className={`w-5 h-5 rounded-full border-2 flex-none flex items-center justify-center ${
-            task.done ? "bg-done border-done" : "border-slate-300 dark:border-slate-600"
+            task.done
+              ? "bg-done border-done"
+              : inProgress
+              ? "border-amber-400"
+              : "border-slate-300 dark:border-slate-600"
           }`}
           aria-label="Tildar tarea"
         >
