@@ -40,12 +40,6 @@ export default function TaskBoard({ session }) {
         .single();
       setProfile(profileData || null);
 
-      const { data: memberData } = await supabase
-        .from("listo_profiles")
-        .select("id, display_name")
-        .order("display_name", { ascending: true });
-      setTeamMembers(memberData || []);
-
       const { data: folderData } = await supabase.from("listo_folders").select("*").order("name", { ascending: true });
       const list = folderData || [];
       setFolders(list);
@@ -79,6 +73,29 @@ export default function TaskBoard({ session }) {
     if (currentFolderId && folders.some((f) => f.id === currentFolderId)) return;
     setCurrentFolderId(folders.find((f) => f.name === "General")?.id || folders[0].id);
   }, [folders, currentFolderId]);
+
+  // Equipo con acceso a la carpeta activa (para el selector de "asignar a")
+  useEffect(() => {
+    if (!currentFolderId) return;
+    let cancelled = false;
+
+    async function loadMembers() {
+      const [{ data: profilesData }, { data: memberRows }] = await Promise.all([
+        supabase.from("listo_profiles").select("id, display_name, is_admin"),
+        supabase.from("listo_folder_members").select("user_id").eq("folder_id", currentFolderId),
+      ]);
+      if (cancelled) return;
+      const memberIds = new Set((memberRows || []).map((m) => m.user_id));
+      const scoped = (profilesData || [])
+        .filter((p) => p.is_admin || memberIds.has(p.id))
+        .sort((a, b) => a.display_name.localeCompare(b.display_name));
+      setTeamMembers(scoped);
+    }
+    loadMembers();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentFolderId]);
 
   // Tareas de la carpeta activa
   useEffect(() => {
