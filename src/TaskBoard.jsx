@@ -276,7 +276,7 @@ export default function TaskBoard({ session }) {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Agregar una tarea…"
-              className="flex-1 min-w-0 text-sm outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
+              className="flex-1 min-w-0 text-sm outline-none bg-transparent text-slate-900 placeholder-slate-400 dark:text-slate-100 dark:placeholder-slate-500"
               maxLength={300}
             />
             <button type="submit" className="bg-accent text-white text-sm font-semibold rounded-lg px-4 py-2 flex-none">
@@ -294,7 +294,7 @@ export default function TaskBoard({ session }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar tareas…"
-                className="flex-1 min-w-0 text-xs outline-none bg-transparent dark:text-slate-100 dark:placeholder-slate-500"
+                className="flex-1 min-w-0 text-xs outline-none bg-transparent text-slate-900 placeholder-slate-400 dark:text-slate-100 dark:placeholder-slate-500"
               />
             </div>
             {FILTERS.map((f) => (

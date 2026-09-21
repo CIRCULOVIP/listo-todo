@@ -234,7 +234,7 @@ export default function TaskItem({ task, teamMembers, onToggle, onDelete, onRena
           onBlur={() => notes !== (task.notes || "") && onSetNotes(task, notes.trim() || null)}
           placeholder="Agregar notas…"
           rows={2}
-          className="mt-2 ml-8 w-[calc(100%-2rem)] text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 outline-none focus:border-accent dark:text-slate-100 dark:placeholder-slate-500"
+          className="mt-2 ml-8 w-[calc(100%-2rem)] text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 outline-none focus:border-accent text-slate-900 placeholder-slate-400 dark:text-slate-100 dark:placeholder-slate-500"
         />
       )}
     </div>
